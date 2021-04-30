@@ -1,11 +1,17 @@
 <?php
 
-use \Punic\Calendar;
+namespace Punic\Test\Calendar;
 
-class ConvertPhpToIsoFormatTest extends PHPUnit_Framework_TestCase
+use DateTime;
+use DateTimeZone;
+use Punic\Calendar;
+use Punic\Test\TestCase;
+
+class ConvertPhpToIsoFormatTest extends TestCase
 {
     const TEST_TIMEZONE = 'America/Los_Angeles';
     private $previousTimezone;
+
     protected function setUp()
     {
         $this->previousTimezone = @date_default_timezone_get();
@@ -14,20 +20,16 @@ class ConvertPhpToIsoFormatTest extends PHPUnit_Framework_TestCase
         }
         date_default_timezone_set(self::TEST_TIMEZONE);
     }
+
     protected function tearDown()
     {
         date_default_timezone_set($this->previousTimezone);
     }
 
-    private static function timestampToDateTime($timestamp)
-    {
-        $dateTime = new DateTime();
-        $dateTime->setTimezone(new DateTimeZone(self::TEST_TIMEZONE));
-        $dateTime->setTimestamp($timestamp);
-
-        return $dateTime;
-    }
-    public function providerConvertPhpToIsoFormat()
+    /**
+     * @return array
+     */
+    public function provideConvertPhpToIsoFormat()
     {
         $chunks = array(
             // Day
@@ -58,8 +60,13 @@ class ConvertPhpToIsoFormatTest extends PHPUnit_Framework_TestCase
 
         return $result;
     }
+
     /**
-     * @dataProvider providerConvertPhpToIsoFormat
+     * @dataProvider provideConvertPhpToIsoFormat
+     *
+     * @param string $phpFormat
+     * @param int $timestamp
+     * @param \DateTime $dateTime
      */
     public function testConvertPhpToIsoFormat($phpFormat, $timestamp, DateTime $dateTime)
     {
@@ -69,5 +76,19 @@ class ConvertPhpToIsoFormatTest extends PHPUnit_Framework_TestCase
             Calendar::format($dateTime, $punicFormat, 'en'),
             "PHP date/time format chunk '$phpFormat' converted as '$punicFormat' and rendered for ".$dateTime->format('c')
         );
+    }
+
+    /**
+     * @param int $timestamp
+     *
+     * @return \DateTime
+     */
+    private static function timestampToDateTime($timestamp)
+    {
+        $dateTime = new DateTime();
+        $dateTime->setTimezone(new DateTimeZone(self::TEST_TIMEZONE));
+        $dateTime->setTimestamp($timestamp);
+
+        return $dateTime;
     }
 }

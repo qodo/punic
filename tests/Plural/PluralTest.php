@@ -1,59 +1,22 @@
 <?php
 
-use \Punic\Plural;
+namespace Punic\Test\Plural;
 
-class PluralTest extends PHPUnit_Framework_TestCase
+use Exception;
+use Punic\Plural;
+use Punic\Test\TestCase;
+
+class PluralTest extends TestCase
 {
-    protected static function joinPluralRules($rules)
-    {
-        usort($rules, function ($a, $b) {
-            foreach (array('zero', 'one', 'two', 'few', 'many', 'other') as $pr) {
-                if ($a == $pr) {
-                    return -1;
-                }
-                if ($b == $pr) {
-                    return 1;
-                }
-            }
-
-            return 0;
-        });
-
-        return implode(', ', $rules);
-    }
-
-    protected static function loadPluralRulesTestData()
-    {
-        $testDataFile = dirname(__DIR__).DIRECTORY_SEPARATOR.'dataFiles'.DIRECTORY_SEPARATOR.'plurals.json';
-        if (!is_file($testDataFile)) {
-            throw new \Exception('Test data file not found: plurals.json');
-        }
-        $json = @file_get_contents($testDataFile);
-        if ($json === false) {
-            throw new \Exception('Test data file not readable: plurals.json');
-        }
-        $data = @json_decode($json, true);
-        if (!is_array($data)) {
-            throw new \Exception('Test data file not valid: plurals.json');
-        }
-
-        return $data;
-    }
-
-    public function providerGetRules()
+    /**
+     * @return array
+     */
+    public function provideGetRules()
     {
         $data = static::loadPluralRulesTestData();
         $parameters = array();
         foreach ($data as $language => $languageTest) {
-            switch ($language) {
-                case 'root':
-                    // The test data for root is incomplete in the source
-                    $rules = array('one', 'other');
-                    break;
-                default:
-                    $rules = array_keys($languageTest);
-                    break;
-            }
+            $rules = array_keys($languageTest);
             $parameters[] = array(
                 static::joinPluralRules($rules),
                 $language,
@@ -67,17 +30,23 @@ class PluralTest extends PHPUnit_Framework_TestCase
      * test getRules
      * expected boolean.
      *
-     * @dataProvider providerGetRules
+     * @dataProvider provideGetRules
+     *
+     * @param string $rules
+     * @param string $language
      */
     public function testGetRules($rules, $language)
     {
         $this->assertSame(
             $rules,
-            static::joinPluralRules(\Punic\Plural::getRules($language))
+            static::joinPluralRules(Plural::getRules($language))
         );
     }
 
-    public function providerGetRule()
+    /**
+     * @return array
+     */
+    public function provideGetRuleOfType()
     {
         $data = static::loadPluralRulesTestData();
         $parameters = array();
@@ -101,39 +70,103 @@ class PluralTest extends PHPUnit_Framework_TestCase
             array('one', array('1', 'en')),
             array('other', array('1.0', 'en')),
             array('other', array('1.1', 'en')),
+            array('other', array(11, 'en', 'ordinal')),
+            array('other', array(12, 'en', 'ordinal')),
+            array('other', array(13, 'en', 'ordinal')),
+            array('one', array(21, 'en', 'ordinal')),
+            array('two', array(22, 'en', 'ordinal')),
+            array('few', array(23, 'en', 'ordinal')),
+            array('other', array(24, 'en', 'ordinal')),
+            array('other', array(21, 'en', 'cardinal')),
         );
 
         return array_merge($parameters, $rules);
     }
 
     /**
-     * test getRule
+     * test getRuleOfType
      * expected boolean.
      *
-     * @dataProvider providerGetRule
+     * @dataProvider provideGetRuleOfType
+     *
+     * @param string $rule
+     * @param array $parameters
      */
-    public function testGetRule($rule, $parameters)
+    public function testGetRuleOfType($rule, $parameters)
     {
+        if ($rule === 'other' && in_array($parameters[0], array('1000.0', '10000.0', '100000.0'), true) && isset($parameters[1]) && $parameters[1] === 'kw' && !isset($parameters[2])) {
+            $this->markTestSkipped('The "other" plural rule has wrong examples for the Cornish (kw) language - see https://unicode-org.atlassian.net/browse/CLDR-11876');
+        }
         $this->assertSame(
             $rule,
-            Plural::getRule($parameters[0], $parameters[1])
-        );
-    }
-
-    public function testExceptionsProvider()
-    {
-        return array(
-            array('getRule', array('not-a-number'), '\\Punic\\Exception\\BadArgumentType'),
-            array('getRule', array(true), '\\Punic\\Exception\\BadArgumentType'),
+            Plural::getRuleOfType($parameters[0], isset($parameters[2]) ? $parameters[2] : Plural::RULETYPE_CARDINAL, $parameters[1])
         );
     }
 
     /**
-     * @dataProvider testExceptionsProvider
+     * @return array
+     */
+    public function provideExceptions()
+    {
+        return array(
+            array('getRuleOfType', array('not-a-number', Plural::RULETYPE_CARDINAL), 'Punic\\Exception\\BadArgumentType'),
+            array('getRuleOfType', array(true, Plural::RULETYPE_CARDINAL), 'Punic\\Exception\\BadArgumentType'),
+            array('getRuleOfType', array(0, 'invalid rule type'), 'Punic\\Exception\\ValueNotInList'),
+        );
+    }
+
+    /**
+     * @dataProvider provideExceptions
+     *
+     * @param string $method
+     * @param array $parameters
+     * @param string $exception
      */
     public function testExceptions($method, $parameters, $exception)
     {
         $this->setExpectedException($exception);
-        call_user_func_array(array('\Punic\Plural', $method), $parameters);
+        call_user_func_array(array('Punic\Plural', $method), $parameters);
+    }
+
+    /**
+     * @param array $rules
+     *
+     * @return string
+     */
+    protected static function joinPluralRules($rules)
+    {
+        usort($rules, function ($a, $b) {
+            foreach (array('zero', 'one', 'two', 'few', 'many', 'other') as $pr) {
+                if ($a == $pr) {
+                    return -1;
+                }
+                if ($b == $pr) {
+                    return 1;
+                }
+            }
+
+            return 0;
+        });
+
+        return implode(', ', $rules);
+    }
+
+    /**
+     * @throws \Exception
+     *
+     * @return array
+     */
+    protected static function loadPluralRulesTestData()
+    {
+        $testDataFile = dirname(__DIR__).DIRECTORY_SEPARATOR.'dataFiles'.DIRECTORY_SEPARATOR.'plurals.php';
+        if (!is_file($testDataFile)) {
+            throw new Exception('Test data file not found: plurals.php');
+        }
+        $data = @include $testDataFile;
+        if (!is_array($data)) {
+            throw new Exception('Test data file not valid: plurals.php');
+        }
+
+        return $data;
     }
 }

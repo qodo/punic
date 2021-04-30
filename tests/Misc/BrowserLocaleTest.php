@@ -1,8 +1,11 @@
 <?php
 
-use \Punic\Misc;
+namespace Punic\Test\Misc;
 
-class BrowserLocaleTest extends PHPUnit_Framework_TestCase
+use Punic\Misc;
+use Punic\Test\TestCase;
+
+class BrowserLocaleTest extends TestCase
 {
     public function testBrowserLocales()
     {
@@ -19,7 +22,10 @@ class BrowserLocaleTest extends PHPUnit_Framework_TestCase
         $this->assertSame(array('en' => 1), $locales);
     }
 
-    public function providerParseHttpAcceptLanguage()
+    /**
+     * @return array
+     */
+    public function provideParseHttpAcceptLanguage()
     {
         return array(
             array('helloworld', array()),
@@ -37,7 +43,10 @@ class BrowserLocaleTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @dataProvider providerParseHttpAcceptLanguage
+     * @dataProvider provideParseHttpAcceptLanguage
+     *
+     * @param string $httpAcceptLanguages
+     * @param array $expected
      */
     public function testParseHttpAcceptLanguage($httpAcceptLanguages, $expected)
     {
@@ -46,9 +55,9 @@ class BrowserLocaleTest extends PHPUnit_Framework_TestCase
         $parsed = Misc::parseHttpAcceptLanguage($httpAcceptLanguages);
         $parsedKeys = array_keys($parsed);
         sort($parsedKeys);
-        $this->assertEquals($keys, $parsedKeys);
+        $this->assertSame($keys, $parsedKeys);
         foreach ($keys as $key) {
-            $this->assertEquals($expected[$key], $parsed[$key]);
+            $this->assertSame($expected[$key], $parsed[$key]);
         }
     }
 }

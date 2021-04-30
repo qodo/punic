@@ -1,5 +1,10 @@
 <phpunit
 	bootstrap="./tests/bootstrap.php"
+	backupGlobals="false"
+	convertErrorsToExceptions="true"
+	convertNoticesToExceptions="true"
+	convertWarningsToExceptions="true"
+	verbose="true"
 >
 	<testsuites>
 		<testsuite name="Data tests">
@@ -10,6 +15,7 @@
 		</testsuite>
 		<testsuite name="Miscellaneous functions tests">
 			<directory>./tests/Misc/</directory>
+			<directory phpVersion="5.5" phpVersionOperator=">=">./tests/Misc5_5/</directory>
 		</testsuite>
 		<testsuite name="Plural functions tests">
 			<directory>./tests/Plural/</directory>
@@ -38,7 +44,10 @@
 	</testsuites>
 	<filter>
 		<whitelist processUncoveredFilesFromWhitelist="true">
-			<directory suffix=".php">./code</directory>
+			<directory suffix=".php">./src</directory>
+			<exclude>
+				<directory suffix=".php">./src/data</directory>
+			</exclude>
 		</whitelist>
 	</filter>
 </phpunit>

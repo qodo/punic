@@ -1,22 +1,31 @@
 <?php
 
-use \Punic\Phone;
+namespace Punic\Test\Phone;
 
-class PhoneTest extends PHPUnit_Framework_TestCase
+use Punic\Phone;
+use Punic\Test\TestCase;
+
+class PhoneTest extends TestCase
 {
-    public function somePrefixes()
+    /**
+     * @return array
+     */
+    public function providePrefixes()
     {
         return array(
             array('US', '1'),
             array('CA', '1'),
             array('IT', '39'),
             array('DE', '49'),
-            array('001', '388'),
+            array('001', '800'),
         );
     }
 
     /**
-     * @dataProvider somePrefixes
+     * @dataProvider providePrefixes
+     *
+     * @param string $territoryCode
+     * @param string $prefix
      */
     public function testGetPrefixesForTerritory($territoryCode, $prefix)
     {
@@ -27,7 +36,10 @@ class PhoneTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @dataProvider somePrefixes
+     * @dataProvider providePrefixes
+     *
+     * @param string $territoryCode
+     * @param string $prefix
      */
     public function testGetTerritoriesForPrefix($territoryCode, $prefix)
     {

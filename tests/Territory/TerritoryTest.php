@@ -1,23 +1,35 @@
 <?php
 
-use \Punic\Territory;
+namespace Punic\Test\Territory;
 
-class TerritoryTest extends PHPUnit_Framework_TestCase
+use Punic\Territory;
+use Punic\Test\TestCase;
+
+class TerritoryTest extends TestCase
 {
-    public function providerGetName()
+    /**
+     * @return array
+     */
+    public function provideGetName()
     {
         return array(
             array('United States', 'US', 'en'),
             array('Stati Uniti', 'US', 'it'),
             array('Italy', 'IT', 'en'),
-            array('Italia', 'IT', 'it'),
+            array('Italy', 'it', 'en'),
+            array('Rome', 'itrm', 'en'),
+            array('provincia di Roma', 'itrm', 'it'),
         );
     }
 
     /**
      * test getName.
      *
-     * @dataProvider providerGetName
+     * @dataProvider provideGetName
+     *
+     * @param string $result
+     * @param string $territoryCode
+     * @param string $forLocale
      */
     public function testGetName($result, $territoryCode, $forLocale)
     {
@@ -25,6 +37,85 @@ class TerritoryTest extends PHPUnit_Framework_TestCase
             $result,
             Territory::getName($territoryCode, $forLocale)
         );
+    }
+
+    /**
+     * @return array
+     */
+    public function provideGetCode()
+    {
+        return array(
+            array('USA', 'US', 'alpha3'),
+            array('840', 'US', 'numeric'),
+            array('US', 'US', 'fips10'),
+            array('AU', 'AT', 'fips10'),
+            array('DGA', 'DG', 'alpha3'),
+            array('', 'EA', 'alpha3'),
+            array('', 'DG', 'numeric'),
+            array('', 'FOO', 'alpha3'),
+        );
+    }
+
+    /**
+     * test getCode.
+     *
+     * @dataProvider provideGetCode
+     *
+     * @param string $result
+     * @param string $territoryCode
+     * @param string $type
+     */
+    public function testGetCode($result, $territoryCode, $type)
+    {
+        $this->assertSame(
+            $result,
+            Territory::getCode($territoryCode, $type)
+        );
+    }
+
+    public function testGetCodeException()
+    {
+        $this->setExpectedException('Punic\\Exception\\ValueNotInList');
+        Territory::getCode('DE', 'foo');
+    }
+
+    /**
+     * @return array
+     */
+    public function provideGetByCode()
+    {
+        return array(
+            array('US', 'USA', 'alpha3'),
+            array('US', '840', 'numeric'),
+            array('US', 840, 'numeric'),
+            array('US', 'US', 'fips10'),
+            array('AT', 'AU', 'fips10'),
+            array('DG', 'DGA', 'alpha3'),
+        );
+    }
+
+    /**
+     * test getByCode.
+     *
+     * @dataProvider provideGetByCode
+     *
+     * @param string $result
+     * @param string $territoryCode
+     * @param string $type
+     * @param mixed $code
+     */
+    public function testGetByCode($result, $code, $type)
+    {
+        $this->assertSame(
+            $result,
+            Territory::getByCode($code, $type)
+        );
+    }
+
+    public function testGetByCodeException()
+    {
+        $this->setExpectedException('Punic\\Exception\\ValueNotInList');
+        Territory::getByCode('666', 'foo');
     }
 
     public function testCountries()
@@ -58,8 +149,8 @@ class TerritoryTest extends PHPUnit_Framework_TestCase
 
     public function testInvalidTerritoryTypeException()
     {
-        $this->setExpectedException('\\Punic\\Exception\\BadArgumentType');
-        $list = Territory::getList('a');
+        $this->setExpectedException('Punic\\Exception\\BadArgumentType');
+        Territory::getList('a');
     }
 
     public function testTerritoriesWithInfo()
@@ -142,9 +233,13 @@ class TerritoryTest extends PHPUnit_Framework_TestCase
     public function testTerritoriesForLanguage()
     {
         $this->assertEmpty(Territory::getTerritoriesForLanguage('fake'));
-        $us = Territory::getTerritoriesForLanguage('en');
-        $this->assertSame('US', $us[0]);
-        $this->assertContains('GB', $us);
+        $en = Territory::getTerritoriesForLanguage('en', 0);
+        $this->assertSame('US', $en[0]);
+        $this->assertContains('GB', $en);
+        $this->assertContains('IT', $en);
+        $enThreshold = Territory::getTerritoriesForLanguage('en', 80);
+        $this->assertSame('US', $enThreshold[0]);
+        $this->assertNotContains('IT', $enThreshold);
         $it = Territory::getTerritoriesForLanguage('it');
         $this->assertSame('IT', $it[0]);
         $this->assertContains('CH', $it);
@@ -152,16 +247,27 @@ class TerritoryTest extends PHPUnit_Framework_TestCase
         $this->assertContains('VA', $it);
     }
 
-    public function providerGetParentTerritoryCode()
+    /**
+     * @return array
+     */
+    public function provideGetParentTerritoryCode()
     {
         return array(
             array(/*World*/'001', /*Nothing*/''),
             array(/*Europe*/'150', /*World*/'001'),
+            array(/*Southern Europe*/'039', /*Europe*/'150'),
+            array(/*Italy*/'IT', /*Northern Europe*/'039'),
+            array(/*Italy*/'it', /*Northern Europe*/'039'),
+            array(/*Lazio*/'it62', /*Italy*/'IT'),
+            array(/*Rome*/'itrm', /*Lazio*/'it62'),
         );
     }
 
     /**
-     * @dataProvider providerGetParentTerritoryCode
+     * @dataProvider provideGetParentTerritoryCode
+     *
+     * @param string $child
+     * @param string $parent
      */
     public function testGetParentTerritoryCode($child, $parent)
     {
@@ -171,22 +277,43 @@ class TerritoryTest extends PHPUnit_Framework_TestCase
         );
     }
 
-    public function providerGetChildTerritoryCodes()
+    /**
+     * @return array
+     */
+    public function provideGetChildTerritoryCodes()
     {
         return array(
-            array(/*World*/'001', false, /*Europe*/'150', true),
-            array(/*World*/'001', false, 'IT', false),
-            array(/*World*/'001', true, /*Europe*/'150', false),
-            array(/*World*/'001', true, 'IT', true),
+            array(/*World*/'001', false, false, /*Europe*/'150', true),
+            array(/*World*/'001', false, false, 'IT', false),
+            array(/*World*/'001', true, false, /*Europe*/'150', false),
+            array(/*World*/'001', true, false, 'IT', true),
+            array(/*World*/'001', true, true, 'IT', false),
+            array(/*World*/'001', true, true, 'it62', false),
+            array(/*World*/'001', true, true, 'itrm', true),
+            array(/*Italy*/'IT', false, false, 'it62', false),
+            array(/*Italy*/'IT', false, false, 'itrm', false),
+            array(/*Italy*/'IT', false, true, 'it62', true),
+            array(/*Italy*/'it', false, true, 'it62', true),
+            array(/*Italy*/'IT', false, true, 'itrm', false),
+            array(/*Italy*/'IT', true, true, 'it62', false),
+            array(/*Italy*/'IT', true, true, 'itrm', true),
+            array(/*Lazio*/'it62', true, false, 'itrm', true),
+            array(/*Lazio*/'it62', true, true, 'itrm', true),
         );
     }
 
     /**
-     * @dataProvider providerGetChildTerritoryCodes
+     * @dataProvider provideGetChildTerritoryCodes
+     *
+     * @param string $parentTerritoryCode
+     * @param bool $expandSubGroups
+     * @param bool $expandSubdivisions
+     * @param string $childTerritoryCode
+     * @param bool $childIncluded
      */
-    public function testGetChildTerritoryCodes($parentTerritoryCode, $expandSubGroups, $childTerritoryCode, $childIncluded)
+    public function testGetChildTerritoryCodes($parentTerritoryCode, $expandSubGroups, $expandSubdivisions, $childTerritoryCode, $childIncluded)
     {
-        $children = Territory::getChildTerritoryCodes($parentTerritoryCode, $expandSubGroups);
+        $children = Territory::getChildTerritoryCodes($parentTerritoryCode, $expandSubGroups, $expandSubdivisions);
         if ($childIncluded) {
             $this->assertContains($childTerritoryCode, $children);
         } else {

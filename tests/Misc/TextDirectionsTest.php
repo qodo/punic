@@ -1,10 +1,17 @@
 <?php
 
-use \Punic\Misc;
+namespace Punic\Test\Misc;
 
-class TextDirectionsTest extends PHPUnit_Framework_TestCase
+use Punic\Data;
+use Punic\Misc;
+use Punic\Test\TestCase;
+
+class TextDirectionsTest extends TestCase
 {
-    public function providerCharacterOrder()
+    /**
+     * @return array
+     */
+    public function provideCharacterOrder()
     {
         return array(
             array('en', 'left-to-right'),
@@ -15,7 +22,10 @@ class TextDirectionsTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @dataProvider providerCharacterOrder
+     * @dataProvider provideCharacterOrder
+     *
+     * @param string $locale
+     * @param string $expectedDirection
      */
     public function testCharacterOrder($locale, $expectedDirection)
     {
@@ -24,13 +34,16 @@ class TextDirectionsTest extends PHPUnit_Framework_TestCase
 
     public function testCharacterOrderDefault()
     {
-        \Punic\Data::setDefaultLocale('ar');
+        Data::setDefaultLocale('ar');
         $this->assertSame('right-to-left', Misc::getCharacterOrder());
-        \Punic\Data::setDefaultLocale('en_US');
+        Data::setDefaultLocale('en_US');
         $this->assertSame('left-to-right', Misc::getCharacterOrder());
     }
 
-    public function providerLineOrder()
+    /**
+     * @return array
+     */
+    public function provideLineOrder()
     {
         return array(
             array('en', 'top-to-bottom'),
@@ -41,7 +54,10 @@ class TextDirectionsTest extends PHPUnit_Framework_TestCase
     }
 
     /**
-     * @dataProvider providerLineOrder
+     * @dataProvider provideLineOrder
+     *
+     * @param string $locale
+     * @param string $expectedDirection
      */
     public function testLineOrder($locale, $expectedDirection)
     {
@@ -50,9 +66,9 @@ class TextDirectionsTest extends PHPUnit_Framework_TestCase
 
     public function testLineOrderDefault()
     {
-        \Punic\Data::setDefaultLocale('ar');
+        Data::setDefaultLocale('ar');
         $this->assertSame('top-to-bottom', Misc::getLineOrder());
-        \Punic\Data::setDefaultLocale('en_US');
+        Data::setDefaultLocale('en_US');
         $this->assertSame('top-to-bottom', Misc::getLineOrder());
     }
 }
